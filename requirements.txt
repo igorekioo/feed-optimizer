@@ -1,4 +1,5 @@
-flask==2.0.1
+flask==2.3.2
+werkzeug==2.3.6
 google-api-python-client==2.19.1
 google-auth==2.3.0
 google-auth-oauthlib==0.4.6
