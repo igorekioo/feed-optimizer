@@ -30,8 +30,7 @@ jobs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
     
-    - name: Deploy to App Engine
-      env:
-        GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-        GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-      run: gcloud app deploy app.yaml --quiet
+    - name: Deploy to App Engine with environment variables
+      run: |
+        gcloud app deploy app.yaml --quiet \
+        --set-env-vars=GOOGLE_CLIENT_ID=${{ secrets.GCP_CLIENT_ID }},GOOGLE_CLIENT_SECRET=${{ secrets.GCP_CLIENT_SECRET }}
