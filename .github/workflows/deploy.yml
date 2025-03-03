@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -29,27 +30,6 @@ jobs:
     - name: Setup Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
       
-    - name: Update app.yaml
-      run: |
-        # Modify app.yaml inline
-        cat > app.yaml << EOL
-        runtime: python39
-        instance_class: F2
-        entrypoint: gunicorn -b :$PORT main:app
-        
-        handlers:
-          - url: /static
-            static_dir: static
-          - url: /.*
-            script: auto
-        
-        env_variables:
-          ENVIRONMENT: "production"
-          SECRET_KEY: "${{ secrets.SECRET_KEY }}"
-          GOOGLE_CLIENT_ID: "${{ secrets.GCP_CLIENT_ID }}"
-          GOOGLE_CLIENT_SECRET: "${{ secrets.GCP_CLIENT_SECRET }}"
-        EOL
-    
     - name: Deploy to App Engine
       run: |
-        gcloud app deploy --quiet
+        gcloud app deploy app.yaml --quiet
