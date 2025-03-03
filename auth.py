@@ -97,10 +97,11 @@ def callback():
         oauth2_client = build('oauth2', 'v2', credentials=credentials)
         user_info = oauth2_client.userinfo().get().execute()
         
-        # Store ONLY necessary user info, NOT full credentials
-        session['user'] = {
+        # Store user info in session
+        session['user_info'] = {
             'email': user_info.get('email'),
-            'name': user_info.get('name')
+            'name': user_info.get('name'),
+            'picture': user_info.get('picture')
         }
         
         # Clear sensitive state
