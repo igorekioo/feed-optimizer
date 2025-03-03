@@ -26,10 +26,10 @@ jobs:
     - name: Setup Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
       
-    - name: Create app.yaml with environment variables
+    - name: Update app.yaml with environment variables
       run: |
-        # Create a temporary app.yaml with environment variables
-        cat > app_deploy.yaml << EOL
+        # Update app.yaml with environment variables
+        cat > app.yaml << EOL
         runtime: python39
         instance_class: F2
         entrypoint: gunicorn -b :$PORT main:app
@@ -44,11 +44,7 @@ jobs:
           GOOGLE_CLIENT_ID: "${{ secrets.GCP_CLIENT_ID }}"
           GOOGLE_CLIENT_SECRET: "${{ secrets.GCP_CLIENT_SECRET }}"
         EOL
-        
-        # Debug: Check the content of the file
-        echo "Content of app_deploy.yaml:"
-        cat app_deploy.yaml
       
     - name: Deploy to App Engine
       run: |
-        gcloud app deploy app_deploy.yaml --quiet
+        gcloud app deploy --quiet
