@@ -13,6 +13,6 @@ handlers:
 
 env_variables:
   ENVIRONMENT: production
-  GOOGLE_CLIENT_ID: "your-client-id"
-  GOOGLE_CLIENT_SECRET: "your-client-secret"
-  SECRET_KEY: "your-secret-key"
+  # GOOGLE_CLIENT_ID: ""
+  # GOOGLE_CLIENT_SECRET: ""
+  SECRET_KEY: "igorek_sk"
