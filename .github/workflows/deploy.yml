@@ -39,11 +39,15 @@ jobs:
           - url: /.*
             script: auto
         env_variables:
-          ENVIRONMENT: production
+          ENVIRONMENT: "production"
           SECRET_KEY: "igorek_sk"
           GOOGLE_CLIENT_ID: "${{ secrets.GCP_CLIENT_ID }}"
           GOOGLE_CLIENT_SECRET: "${{ secrets.GCP_CLIENT_SECRET }}"
         EOL
+        
+        # Debug: Check the content of the file
+        echo "Content of app_deploy.yaml:"
+        cat app_deploy.yaml
       
     - name: Deploy to App Engine
       run: |
