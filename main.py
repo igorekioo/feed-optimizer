@@ -1,3 +1,6 @@
+from auth import auth_bp
+from merchant import merchant_bp
+
 import os
 from flask import Flask, render_template, redirect, url_for, session, flash
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -20,10 +23,8 @@ app.session_interface = FileSystemSessionInterface(
     storage_path=os.path.join(os.getcwd(), 'flask_session')
 )
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=7)
-
-# We'll register blueprints after creating them
-# app.register_blueprint(auth_bp, url_prefix='/auth')
-# app.register_blueprint(merchant_bp, url_prefix='/merchant')
+app.register_blueprint(auth_bp, url_prefix='/auth')
+app.register_blueprint(merchant_bp, url_prefix='/merchant')
 
 @app.route('/')
 def index():
