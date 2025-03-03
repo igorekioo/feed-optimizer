@@ -12,7 +12,4 @@ handlers:
     script: auto
 
 env_variables:
-  ENVIRONMENT: production
-  # GOOGLE_CLIENT_ID: ""
-  # GOOGLE_CLIENT_SECRET: ""
-  SECRET_KEY: "igorek_sk"
+  ENVIRONMENT: "production"
