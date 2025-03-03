@@ -1,44 +1,15 @@
-# Окружение Python
+# Python bytecode
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-*.egg-info/
-.installed.cfg
-*.egg
 
-# Виртуальное окружение
-venv/
-ENV/
-
-# Файл с ключом сервисного аккаунта
-service-account-key.json
-
-# Переменные окружения
+# Environment variables
 .env
+.env.yaml
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Session files
+# Flask sessions
 flask_session/
 
-# Системные файлы
-.DS_Store
-Thumbs.db
+# Service account keys
+*.json
+!requirements.json
