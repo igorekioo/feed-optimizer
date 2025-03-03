@@ -1,4 +1,4 @@
-name: Deploy to Google App Engine
+name: Deploy to App Engine
 
 on:
   push:
@@ -10,27 +10,41 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
+        
     - name: Auth to Google Cloud
       uses: google-github-actions/auth@v1
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
-    
-    - name: Set up Cloud SDK
+        
+    - name: Setup Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
-    
-    - name: Deploy to App Engine with environment variables
+      
+    - name: Create app.yaml with environment variables
       run: |
-        gcloud app deploy app.yaml --quiet \
-        --set-env-vars=GOOGLE_CLIENT_ID=${{ secrets.GCP_CLIENT_ID }},GOOGLE_CLIENT_SECRET=${{ secrets.GCP_CLIENT_SECRET }}
+        # Create a temporary app.yaml with environment variables
+        cat > app_deploy.yaml << EOL
+        runtime: python39
+        instance_class: F2
+        entrypoint: gunicorn -b :$PORT main:app
+        handlers:
+          - url: /static
+            static_dir: static
+          - url: /.*
+            script: auto
+        env_variables:
+          ENVIRONMENT: production
+          SECRET_KEY: "igorek_sk"
+          GOOGLE_CLIENT_ID: "${{ secrets.GCP_CLIENT_ID }}"
+          GOOGLE_CLIENT_SECRET: "${{ secrets.GCP_CLIENT_SECRET }}"
+        EOL
+      
+    - name: Deploy to App Engine
+      run: |
+        gcloud app deploy app_deploy.yaml --quiet
