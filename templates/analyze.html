@@ -1,69 +1,214 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Feed Optimizer - Анализ</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="/">Feed Optimizer</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/connect">Подключение</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/analyze">Анализ</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/optimize">Оптимизация</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+{% extends "index.html" %}
 
-    <div class="container mt-4">
-        <h1>Анализ фида данных</h1>
-        
-        <div class="alert alert-info">
-            <h4>Идет анализ данных аккаунта...</h4>
-            <p>Пожалуйста, подождите. Это может занять некоторое время в зависимости от размера вашего фида.</p>
+{% block content %}
+<div class="container mt-4">
+    <h1>Account Analysis</h1>
+    
+    {% if account_analysis %}
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2>Account Overview</h2>
+                </div>
+                <div class="card-body">
+                    <h4>{{ account_analysis.stats.name }}</h4>
+                    {% if account_analysis.stats.website %}
+                    <p><a href="{{ account_analysis.stats.website }}" target="_blank">{{ account_analysis.stats.website }}</a></p>
+                    {% endif %}
+                    <p>Account Status: 
+                        {% if account_analysis.account_status == 'good' %}
+                        <span class="badge bg-success">Good</span>
+                        {% elif account_analysis.account_status == 'warning' %}
+                        <span class="badge bg-warning text-dark">Needs Attention</span>
+                        {% else %}
+                        <span class="badge bg-danger">Critical Issues</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2>Statistics</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="card text-center mb-3">
+                                <div class="card-body">
+                                    <h3>{{ account_analysis.stats.products_count }}</h3>
+                                    <p class="card-text">Products</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card text-center mb-3">
+                                <div class="card-body">
+                                    <h3>{{ account_analysis.stats.feeds_count }}</h3>
+                                    <p class="card-text">Feeds</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="card text-center mb-3">
+                                <div class="card-body">
+                                    <h3>{{ account_analysis.stats.issues_count }}</h3>
+                                    <p class="card-text">Issues</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card text-center mb-3">
+                                <div class="card-body">
+                                    <h3>{{ account_analysis.stats.disapproved_count }}</h3>
+                                    <p class="card-text">Disapproved</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         
-        <!-- Здесь будут отображаться результаты анализа -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h2>Статистика аккаунта</h2>
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2>Account Issues</h2>
+                </div>
+                <div class="card-body">
+                    {% if account_analysis.issues.critical %}
+                    <h4>Critical Issues</h4>
+                    <ul class="list-group mb-3">
+                        {% for issue in account_analysis.issues.critical %}
+                        <li class="list-group-item list-group-item-danger">
+                            {{ issue.message }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    
+                    {% if account_analysis.issues.warning %}
+                    <h4>Warnings</h4>
+                    <ul class="list-group mb-3">
+                        {% for issue in account_analysis.issues.warning %}
+                        <li class="list-group-item list-group-item-warning">
+                            {{ issue.message }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    
+                    {% if account_analysis.issues.info %}
+                    <h4>Information</h4>
+                    <ul class="list-group mb-3">
+                        {% for issue in account_analysis.issues.info %}
+                        <li class="list-group-item list-group-item-info">
+                            {{ issue.message }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    
+                    {% if not account_analysis.issues.critical and not account_analysis.issues.warning and not account_analysis.issues.info %}
+                    <div class="alert alert-success">
+                        No issues detected! Your account is in good shape.
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            <div class="card-body">
-                <p>Всего товаров: <strong>0</strong></p>
-                <p>Активных товаров: <strong>0</strong></p>
-                <p>Отклоненных товаров: <strong>0</strong></p>
-                <p>Товаров с ошибками: <strong>0</strong></p>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2>Product Sample Analysis</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Status</th>
+                                    <th>Issues</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in product_analyses %}
+                                <tr>
+                                    <td>{{ product.title }}</td>
+                                    <td>
+                                        {% if product.status == 'good' %}
+                                        <span class="badge bg-success">Good</span>
+                                        {% elif product.status == 'warning' %}
+                                        <span class="badge bg-warning text-dark">Warning</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Critical</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% set issue_count = product.issues.critical|length + product.issues.warning|length + product.issues.info|length %}
+                                        {% if issue_count > 0 %}
+                                        <button class="btn btn-sm btn-info" type="button" data-bs-toggle="collapse" 
+                                                data-bs-target="#issues-{{ loop.index }}">
+                                            Show {{ issue_count }} issues
+                                        </button>
+                                        <div class="collapse mt-2" id="issues-{{ loop.index }}">
+                                            {% if product.issues.critical %}
+                                            <div class="mb-2">
+                                                <strong>Critical:</strong>
+                                                <ul class="list-group">
+                                                    {% for issue in product.issues.critical %}
+                                                    <li class="list-group-item list-group-item-danger">{{ issue.message }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if product.issues.warning %}
+                                            <div class="mb-2">
+                                                <strong>Warnings:</strong>
+                                                <ul class="list-group">
+                                                    {% for issue in product.issues.warning %}
+                                                    <li class="list-group-item list-group-item-warning">{{ issue.message }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if product.issues.info %}
+                                            <div>
+                                                <strong>Info:</strong>
+                                                <ul class="list-group">
+                                                    {% for issue in product.issues.info %}
+                                                    <li class="list-group-item list-group-item-info">{{ issue.message }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        {% else %}
+                                        <span class="badge bg-success">No issues</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
-        
-        <div class="card mt-4">
-            <div class="card-header">
-                <h2>Выявленные проблемы</h2>
-            </div>
-            <div class="card-body">
-                <p>После завершения анализа, здесь будет список выявленных проблем с товарами.</p>
-            </div>
-        </div>
-        
-        <div class="text-center mt-4 mb-4">
-            <a href="/optimize" class="btn btn-primary btn-lg">Перейти к оптимизации</a>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    
+    <div class="text-center mt-4 mb-4">
+        <a href="{{ url_for('optimize') }}" class="btn btn-primary btn-lg">Go to Optimization</a>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        Could not load account analysis. Please try again later.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
