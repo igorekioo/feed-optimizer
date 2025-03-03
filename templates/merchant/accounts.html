@@ -1,0 +1,42 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Select Merchant Center Account</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    {% if accounts %}
+        <div class="list-group mt-4">
+            {% for account in accounts %}
+                <a href="{{ url_for('merchant.select_account', merchant_id=account.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ account.name }}</h5>
+                        <small>ID: {{ account.id }}</small>
+                    </div>
+                    {% if account.websiteUrl %}
+                        <p class="mb-1">{{ account.websiteUrl }}</p>
+                    {% endif %}
+                    {% if account.error %}
+                        <div class="text-danger">Note: {{ account.error }}</div>
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No Merchant Center accounts found for your Google account.
+        </div>
+    {% endif %}
+    
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
+    </div>
+</div>
+{% endblock %}
