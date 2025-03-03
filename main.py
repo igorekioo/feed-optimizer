@@ -41,6 +41,11 @@ def index():
 def analyze():
     """Analysis page."""
     try:
+        # Check if user is logged in
+        if 'user_info' not in session:
+            flash('Please log in first', 'warning')
+            return redirect(url_for('index'))
+        
         # Check if Merchant Center account is selected
         if 'merchant_id' not in session:
             flash('Please select a Merchant Center account first.', 'warning')
@@ -58,6 +63,11 @@ def analyze():
 def optimize():
     """Optimization page."""
     try:
+        # Check if user is logged in
+        if 'user_info' not in session:
+            flash('Please log in first', 'warning')
+            return redirect(url_for('index'))
+        
         # Check if Merchant Center account is selected
         if 'merchant_id' not in session:
             flash('Please select a Merchant Center account first.', 'warning')
@@ -71,3 +81,4 @@ def optimize():
 @app.errorhandler(500)
 def server_error(e):
     logging.exception('An error occurred during a request.')
+    return "Internal Server Error", 500
