@@ -5,6 +5,10 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import google.auth.transport.requests
+import logging
+
+# Create logger
+logger = logging.getLogger(__name__)
 
 # Create Blueprint for authorization routes
 auth_bp = Blueprint('auth', __name__)
@@ -18,111 +22,139 @@ SCOPES = [
 
 def create_flow(redirect_uri):
     """Creates a Flow object for OAuth authentication."""
-    client_config = {
-        "web": {
-            "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
-            "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [redirect_uri]
+    try:
+        client_config = {
+            "web": {
+                "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+                "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [redirect_uri]
+            }
         }
-    }
-    
-    return Flow.from_client_config(
-        client_config=client_config,
-        scopes=SCOPES,
-        redirect_uri=redirect_uri
-    )
+        
+        return Flow.from_client_config(
+            client_config=client_config,
+            scopes=SCOPES,
+            redirect_uri=redirect_uri
+        )
+    except Exception as e:
+        logger.error(f"Error creating OAuth flow: {e}")
+        return None
 
 @auth_bp.route('/login')
 def login():
     """Initiates the OAuth authentication process."""
-    # Define the callback URL
-    redirect_uri = url_for('auth.callback', _external=True)
-    
-    # Create Flow object
-    flow = create_flow(redirect_uri)
-    
-    # Generate authorization URL
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true',
-        prompt='consent'
-    )
-    
-    # Save state in session for security
-    session['state'] = state
-    
-    # Redirect the user to Google authorization page
-    return redirect(authorization_url)
+    try:
+        # Define the callback URL
+        redirect_uri = url_for('auth.callback', _external=True)
+        
+        # Create Flow object
+        flow = create_flow(redirect_uri)
+        if not flow:
+            return "Error creating authentication flow. Check logs for details.", 500
+        
+        # Generate authorization URL
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'
+        )
+        
+        # Save state in session for security
+        session['state'] = state
+        
+        # Redirect the user to Google authorization page
+        return redirect(authorization_url)
+    except Exception as e:
+        logger.error(f"Error in login route: {e}")
+        return f"Authentication error: {str(e)}", 500
 
 @auth_bp.route('/callback')
 def callback():
     """Handles the response from the authorization server."""
-    # Verify state for CSRF protection
-    if request.args.get('state') != session.get('state'):
-        return redirect(url_for('index'))
-    
-    # Get authorization code
-    authorization_code = request.args.get('code')
-    if not authorization_code:
-        return redirect(url_for('index'))
-    
-    # Define the callback URL
-    redirect_uri = url_for('auth.callback', _external=True)
-    
-    # Create Flow object
-    flow = create_flow(redirect_uri)
-    
-    # Exchange code for access tokens
-    flow.fetch_token(code=authorization_code)
-    
-    # Get credentials
-    credentials = flow.credentials
-    
-    # Save credentials in session
-    session['credentials'] = {
-        'token': credentials.token,
-        'refresh_token': credentials.refresh_token,
-        'token_uri': credentials.token_uri,
-        'client_id': credentials.client_id,
-        'client_secret': credentials.client_secret,
-        'scopes': credentials.scopes
-    }
-    
-    # Get user information
-    user_info = get_user_info(credentials)
-    session['user_info'] = user_info
-    
-    # Redirect to Merchant Center account selection page
-    return redirect(url_for('merchant.list_accounts'))
+    try:
+        # Verify state for CSRF protection
+        if request.args.get('state') != session.get('state'):
+            return redirect(url_for('index'))
+        
+        # Get authorization code
+        authorization_code = request.args.get('code')
+        if not authorization_code:
+            return redirect(url_for('index'))
+        
+        # Define the callback URL
+        redirect_uri = url_for('auth.callback', _external=True)
+        
+        # Create Flow object
+        flow = create_flow(redirect_uri)
+        if not flow:
+            return "Error creating authentication flow. Check logs for details.", 500
+        
+        # Exchange code for access tokens
+        flow.fetch_token(code=authorization_code)
+        
+        # Get credentials
+        credentials = flow.credentials
+        
+        # Save credentials in session
+        session['credentials'] = {
+            'token': credentials.token,
+            'refresh_token': credentials.refresh_token,
+            'token_uri': credentials.token_uri,
+            'client_id': credentials.client_id,
+            'client_secret': credentials.client_secret,
+            'scopes': credentials.scopes
+        }
+        
+        # Get user information
+        user_info = get_user_info(credentials)
+        session['user_info'] = user_info
+        
+        # Redirect to Merchant Center account selection page
+        return redirect(url_for('merchant.list_accounts'))
+    except Exception as e:
+        logger.error(f"Error in callback route: {e}")
+        return f"Authentication callback error: {str(e)}", 500
 
 @auth_bp.route('/logout')
 def logout():
     """Logs the user out."""
-    # Clear session
-    session.clear()
-    
-    # Redirect to home page
-    return redirect(url_for('index'))
+    try:
+        # Clear session
+        session.clear()
+        
+        # Redirect to home page
+        return redirect(url_for('index'))
+    except Exception as e:
+        logger.error(f"Error in logout route: {e}")
+        return f"Error during logout: {str(e)}", 500
 
 def get_user_info(credentials):
     """Gets information about the user."""
-    service = build('oauth2', 'v2', credentials=credentials)
-    user_info = service.userinfo().get().execute()
-    return user_info
+    try:
+        service = build('oauth2', 'v2', credentials=credentials)
+        user_info = service.userinfo().get().execute()
+        return user_info
+    except Exception as e:
+        logger.error(f"Error getting user info: {e}")
+        return None
 
 def get_credentials():
     """Gets credentials from the session."""
-    if 'credentials' not in session:
+    try:
+        if 'credentials' not in session:
+            return None
+        
+        credentials_dict = session['credentials']
+        return Credentials(
+            token=credentials_dict['token'],
+            refresh_token=credentials_dict['refresh_token'],
+            token_uri=credentials_dict['token_uri'],
+            client_id=credentials_dict['client_id'],
+            client_secret=credentials_dict['client_secret'],
+            scopes=credentials_dict['scopes']
+        )
+    except Exception as e:
+        logger.error(f"Error retrieving credentials: {e}")
         return None
-    
-    credentials_dict = session['credentials']
-    return Credentials(
-        token=credentials_dict['token'],
-        refresh_token=credentials_dict['refresh_token'],
-        token_uri=credentials_dict['token_uri'],
-        client_id=credentials_dict['client_id'],
-        client_secret=credentials_dict['client_secret'],
-        scopes=credentials_dict['scopes']
-    )
