@@ -39,7 +39,35 @@ def analyze():
         flash('Please select a Merchant Center account first.', 'warning')
         return redirect(url_for('merchant.list_accounts'))
     
-    return render_template('analyze.html')
+    # Get merchant ID from session
+    merchant_id = session['merchant_id']
+    
+    # Import analyzer here to avoid circular imports
+    from analyzer import analyze_account, get_products, get_product_statuses, analyze_product
+    
+    # Analyze account
+    account_analysis = analyze_account(merchant_id)
+    
+    # Get sample products for demonstration
+    products = get_products(merchant_id, max_results=10)
+    product_statuses = get_product_statuses(merchant_id, max_results=10)
+    
+    # Map products to their statuses
+    product_status_map = {status.get('productId'): status for status in product_statuses}
+    
+    # Analyze products
+    product_analyses = []
+    for product in products:
+        product_id = product.get('id')
+        product_status = product_status_map.get(product_id)
+        product_analysis = analyze_product(product, product_status)
+        product_analyses.append(product_analysis)
+    
+    return render_template(
+        'analyze.html',
+        account_analysis=account_analysis,
+        product_analyses=product_analyses
+    )
 
 @app.route('/optimize')
 def optimize():
