@@ -26,6 +26,14 @@ jobs:
     - name: Setup Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
     
+    - name: Create .env.yaml file
+      run: |
+        cat > .env.yaml << EOL
+        env_variables:
+          GOOGLE_CLIENT_ID: "${{ secrets.GCP_CLIENT_ID }}"
+          GOOGLE_CLIENT_SECRET: "${{ secrets.GCP_CLIENT_SECRET }}"
+        EOL
+    
     - name: Deploy to App Engine
       run: |
-        gcloud app deploy --quiet
+        gcloud app deploy --quiet --env-vars-file .env.yaml
