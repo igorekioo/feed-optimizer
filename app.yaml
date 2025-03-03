@@ -11,4 +11,3 @@ handlers:
 
 env_variables:
   ENVIRONMENT: "production"
-  SECRET_KEY: "$SECRET_KEY"
