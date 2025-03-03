@@ -21,6 +21,9 @@ SCOPES = [
 ]
 
 def create_flow(redirect_uri):
+    print(f"Client ID: {os.environ.get('GOOGLE_CLIENT_ID')}")
+    print(f"Redirect URI: {redirect_uri}")
+    logger.info(f"Attempting to create flow with redirect: {redirect_uri}")
     """Creates a Flow object for OAuth authentication."""
     try:
         client_config = {
