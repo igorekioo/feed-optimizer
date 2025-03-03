@@ -1,11 +1,10 @@
 import os
-import json
+import logging
 from flask import Blueprint, redirect, url_for, session, request, current_app
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import google.auth.transport.requests
-import logging
 
 # Create logger
 logger = logging.getLogger(__name__)
@@ -13,26 +12,26 @@ logger = logging.getLogger(__name__)
 # Create Blueprint for authorization routes
 auth_bp = Blueprint('auth', __name__)
 
-# Scopes we request from the user
+# Minimal, specific scopes
 SCOPES = [
-    'https://www.googleapis.com/auth/content',
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile'
 ]
 
-def create_flow(redirect_uri):
-    print(f"Client ID: {os.environ.get('GOOGLE_CLIENT_ID')}")
-    print(f"Redirect URI: {redirect_uri}")
-    logger.info(f"Attempting to create flow with redirect: {redirect_uri}")
-    """Creates a Flow object for OAuth authentication."""
+def get_google_oauth_flow(redirect_uri):
+    """Safely create OAuth flow without exposing credentials."""
     try:
+        # Use environment variables securely
         client_config = {
             "web": {
-                "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
-                "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+                "client_id": os.environ.get("GCP_CLIENT_ID"),
+                "client_secret": os.environ.get("GCP_CLIENT_SECRET"),
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [redirect_uri]
+                "redirect_uris": [
+                    "https://feed-optimization-448714.uc.r.appspot.com/auth/callback",
+                    "http://localhost:5000/auth/callback"
+                ]
             }
         }
         
@@ -42,122 +41,79 @@ def create_flow(redirect_uri):
             redirect_uri=redirect_uri
         )
     except Exception as e:
-        logger.error(f"Error creating OAuth flow: {e}")
+        logger.error(f"OAuth flow creation error: {e}")
         return None
 
 @auth_bp.route('/login')
 def login():
-    """Initiates the OAuth authentication process."""
+    """Initiate secure OAuth authentication."""
     try:
-        # Define the callback URL
+        # Use _external=True to get full URL
         redirect_uri = url_for('auth.callback', _external=True)
         
-        # Create Flow object
-        flow = create_flow(redirect_uri)
+        flow = get_google_oauth_flow(redirect_uri)
         if not flow:
-            return "Error creating authentication flow. Check logs for details.", 500
+            logger.error("Failed to create OAuth flow")
+            return "Authentication setup error", 500
         
         # Generate authorization URL
         authorization_url, state = flow.authorization_url(
             access_type='offline',
-            include_granted_scopes='true',
             prompt='consent'
         )
         
-        # Save state in session for security
-        session['state'] = state
+        # Securely store state in session
+        session['oauth_state'] = state
         
-        # Redirect the user to Google authorization page
         return redirect(authorization_url)
     except Exception as e:
-        logger.error(f"Error in login route: {e}")
-        return f"Authentication error: {str(e)}", 500
+        logger.error(f"Login process error: {e}")
+        return "Authentication error", 500
 
 @auth_bp.route('/callback')
 def callback():
-    """Handles the response from the authorization server."""
+    """Handle OAuth callback securely."""
     try:
-        # Verify state for CSRF protection
-        if request.args.get('state') != session.get('state'):
-            return redirect(url_for('index'))
+        # Validate state to prevent CSRF
+        if request.args.get('state') != session.get('oauth_state'):
+            logger.warning("State mismatch - possible CSRF attempt")
+            return "Authentication failed", 403
         
-        # Get authorization code
-        authorization_code = request.args.get('code')
-        if not authorization_code:
-            return redirect(url_for('index'))
-        
-        # Define the callback URL
+        # Prepare redirect URI
         redirect_uri = url_for('auth.callback', _external=True)
         
-        # Create Flow object
-        flow = create_flow(redirect_uri)
+        # Create flow
+        flow = get_google_oauth_flow(redirect_uri)
         if not flow:
-            return "Error creating authentication flow. Check logs for details.", 500
+            return "Authentication setup error", 500
         
-        # Exchange code for access tokens
-        flow.fetch_token(code=authorization_code)
+        # Fetch and validate token
+        flow.fetch_token(authorization_response=request.url)
         
         # Get credentials
         credentials = flow.credentials
         
-        # Save credentials in session
-        session['credentials'] = {
-            'token': credentials.token,
-            'refresh_token': credentials.refresh_token,
-            'token_uri': credentials.token_uri,
-            'client_id': credentials.client_id,
-            'client_secret': credentials.client_secret,
-            'scopes': credentials.scopes
+        # Fetch minimal user info
+        oauth2_client = build('oauth2', 'v2', credentials=credentials)
+        user_info = oauth2_client.userinfo().get().execute()
+        
+        # Store ONLY necessary user info, NOT full credentials
+        session['user'] = {
+            'email': user_info.get('email'),
+            'name': user_info.get('name')
         }
         
-        # Get user information
-        user_info = get_user_info(credentials)
-        session['user_info'] = user_info
+        # Clear sensitive state
+        session.pop('oauth_state', None)
         
-        # Redirect to Merchant Center account selection page
-        return redirect(url_for('merchant.list_accounts'))
+        return redirect(url_for('index'))
+    
     except Exception as e:
-        logger.error(f"Error in callback route: {e}")
-        return f"Authentication callback error: {str(e)}", 500
+        logger.error(f"Callback processing error: {e}")
+        return "Authentication failed", 401
 
 @auth_bp.route('/logout')
 def logout():
-    """Logs the user out."""
-    try:
-        # Clear session
-        session.clear()
-        
-        # Redirect to home page
-        return redirect(url_for('index'))
-    except Exception as e:
-        logger.error(f"Error in logout route: {e}")
-        return f"Error during logout: {str(e)}", 500
-
-def get_user_info(credentials):
-    """Gets information about the user."""
-    try:
-        service = build('oauth2', 'v2', credentials=credentials)
-        user_info = service.userinfo().get().execute()
-        return user_info
-    except Exception as e:
-        logger.error(f"Error getting user info: {e}")
-        return None
-
-def get_credentials():
-    """Gets credentials from the session."""
-    try:
-        if 'credentials' not in session:
-            return None
-        
-        credentials_dict = session['credentials']
-        return Credentials(
-            token=credentials_dict['token'],
-            refresh_token=credentials_dict['refresh_token'],
-            token_uri=credentials_dict['token_uri'],
-            client_id=credentials_dict['client_id'],
-            client_secret=credentials_dict['client_secret'],
-            scopes=credentials_dict['scopes']
-        )
-    except Exception as e:
-        logger.error(f"Error retrieving credentials: {e}")
-        return None
+    """Secure logout."""
+    session.clear()
+    return redirect(url_for('index'))
